@@ -23,6 +23,7 @@ The table is a test record, not a hardcoded registration list. The app queries C
 - **Different-model subagent:** Luna parent invoked the generated `codex-gpt-5-6-sol-medium` agent. Claude recorded one completed subagent, model usage for both Luna and Sol, and a real `Read` call from Sol. The returned contents matched a randomly generated file. Final-hop metadata showed Sol with `medium` effort.
 - **File tools:** a separate installed-gateway run read a file through a subagent and used `Write` in the parent; the written file matched the original contents.
 - **Removal and reinstall:** uninstall restored the original Claude settings exactly, removed all 24 generated definitions, and stopped the launchd service. Reinstall restored five picker models and 24 generated agents; `doctor` reported all checks passing.
+- **Crash recovery:** terminated the gateway process with `SIGKILL`; launchd created a new process automatically and the gateway plus converter health check recovered.
 - **Claude update path:** ran `claude update`; it reported that 2.1.272 was already current. Settings remained usable. This was an updater-path check, not a cross-version upgrade measurement.
 - **macOS TLS:** the local Python.org installation initially lacked a default CA bundle. Loading macOS's `/etc/ssl/cert.pem` resolved verified HTTPS without disabling certificate checks.
 
