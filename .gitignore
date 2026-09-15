@@ -1,0 +1,8 @@
+.ultra-search/
+.work/
+.venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+dist/
+*.egg-info/
