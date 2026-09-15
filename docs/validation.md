@@ -19,6 +19,7 @@ The table is a test record, not a hardcoded registration list. The app queries C
 ## Real Claude Code flows
 
 - **Native model menu:** opened `/model` in the interactive terminal, confirmed GPT rows alongside the original Claude choices, and exercised the effort arrows. Claude clamps GPT 5.5 to `xhigh` when a request asks for `max`.
+- **Switching during a conversation:** gave Luna a token to remember, selected Sol in the real `/model` menu with the session-only option, and asked Sol to repeat the token. It returned the original token correctly without changing the user's saved default model.
 - **Different-model subagent:** Luna parent invoked the generated `codex-gpt-5-6-sol-medium` agent. Claude recorded one completed subagent, model usage for both Luna and Sol, and a real `Read` call from Sol. The returned contents matched a randomly generated file. Final-hop metadata showed Sol with `medium` effort.
 - **File tools:** a separate installed-gateway run read a file through a subagent and used `Write` in the parent; the written file matched the original contents.
 - **Removal and reinstall:** uninstall restored the original Claude settings exactly, removed all 24 generated definitions, and stopped the launchd service. Reinstall restored five picker models and 24 generated agents; `doctor` reported all checks passing.
