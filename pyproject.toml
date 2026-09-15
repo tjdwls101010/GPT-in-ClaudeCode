@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gpt-in-claudecode"
+version = "0.1.0"
+description = "Add your Codex models to Claude Code with automatic model discovery."
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+gpt-in-claude = "gpt_in_claudecode.__main__:main"
+
+[tool.setuptools]
+packages = ["gpt_in_claudecode"]
+package-dir = {gpt_in_claudecode = "src"}
