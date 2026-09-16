@@ -6,6 +6,8 @@ Claude Code supports user-level [`modelPicker`](https://code.claude.com/docs/en/
 
 Picker entries and generated subagents use the `[1m]` suffix so Claude declares a 1,000,000-token client window instead of the gateway's 200K fallback. Claude strips the suffix before the gateway receives the request, so discovery, credential routing, and the converter continue using the original Codex model ID. This does not change a provider's actual context limit. Claude's original model windows and global auto-compaction setting are left alone.
 
+Bare `astra`, `sol`, `terra`, and `luna` aliases are resolved at the local HTTP boundary to the highest numeric family version in the current account catalog. They are not native Claude family aliases. To retain effort and 1M without modifying user-authored agent files, the installer adds name-scoped `CLAUDE_CODE_MODEL_CAPABILITIES` rules and `CLAUDE_CODE_MAX_CONTEXT_TOKENS=1000000`. The latter also applies to other unrecognized custom IDs, but does not change recognized Claude model windows with normal compaction enabled. These added environment values are tracked and restored on removal; unrelated capability rules are retained. The native `/model` menu keeps the full GPT version entries, so aliases do not add duplicate rows.
+
 Gateway `/v1/models` discovery alone is insufficient: Claude Code [filters those results to IDs containing `claude` or `anthropic`](https://code.claude.com/docs/en/llm-gateway-protocol#model-discovery). Updating the native picker from Codex's official [`model/list`](https://developers.openai.com/codex/app-server) avoids fabricated model aliases and manual registration.
 
 ## Reuse CLIProxyAPI for protocol conversion

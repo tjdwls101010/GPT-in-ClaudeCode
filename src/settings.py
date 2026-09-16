@@ -7,6 +7,12 @@ import os
 from pathlib import Path
 import tempfile
 
+from .codex import model_aliases
+
+
+MAX_CONTEXT = "CLAUDE_CODE_MAX_CONTEXT_TOKENS"
+MODEL_CAPABILITIES = "CLAUDE_CODE_MODEL_CAPABILITIES"
+
 
 @contextmanager
 def state_lock(state):
@@ -46,6 +52,23 @@ def claude_model_id(model_id):
     return model_id + "[1m]"
 
 
+def restore_alias_environment(env, config):
+    for key, entry in config.get("managed_alias_env", {}).items():
+        if env.get(key) == entry["value"]:
+            if entry["before"] is None:
+                env.pop(key, None)
+            else:
+                env[key] = entry["before"]
+        elif key == MODEL_CAPABILITIES and key in env:
+            remaining = [rule for rule in env[key].split(";") if rule not in config.get("alias_capability_rules", [])]
+            if any(remaining):
+                env[key] = ";".join(remaining)
+            else:
+                env.pop(key, None)
+    config["managed_alias_env"] = {}
+    config["alias_capability_rules"] = []
+
+
 def remove_model_settings(settings, config):
     picker = settings.get("modelPicker", {})
     picker["options"] = [row for row in picker.get("options", []) if row not in config.get("managed_rows", [])]
@@ -68,15 +91,24 @@ def apply_settings(config):
     settings = read_json(path, {})
     if not isinstance(settings, dict):
         raise ValueError("Claude settings must be a JSON object")
-    previous_ids = {row["model"] for row in config.get("managed_rows", [])}
+    aliases = model_aliases(config["models"])
+    previous_ids = {row["model"] for row in config.get("managed_rows", [])} | set(config.get("managed_aliases", {}))
     base_ids = {m["id"] for m in config["models"]}
-    current_ids = {claude_model_id(model_id) for model_id in base_ids}
+    current_ids = {claude_model_id(model_id) for model_id in base_ids} | set(aliases)
     if settings.get("model") in base_ids:
         settings["model"] = claude_model_id(settings["model"])
     elif settings.get("model") in previous_ids - current_ids:
         settings["model"] = claude_model_id(config["models"][0]["id"])
     remove_model_settings(settings, config)
     env = settings.setdefault("env", {})
+    restore_alias_environment(env, config)
+    if aliases:
+        rules = [f"{alias}=effort,xhigh_effort,max_effort,adaptive_thinking" for alias in aliases]
+        values = {MAX_CONTEXT: "1000000", MODEL_CAPABILITIES: ";".join([env.get(MODEL_CAPABILITIES, ""), *rules]).lstrip(";")}
+        config["managed_alias_env"] = {key: {"before": env.get(key), "value": value} for key, value in values.items()}
+        config["alias_capability_rules"] = rules
+        env.update(values)
+    config["managed_aliases"] = aliases
     env["ANTHROPIC_BASE_URL"] = f"http://127.0.0.1:{config['port']}"
     header = "x-gpt-in-claudecode-key: " + config["key"]
     others = [line for line in env.get("ANTHROPIC_CUSTOM_HEADERS", "").splitlines() if not line.lower().startswith("x-gpt-in-claudecode-key:")]
@@ -92,10 +124,13 @@ def apply_settings(config):
             row = {"model": model_id, "label": model["name"] + " (1M context)", "description": "Codex login · " + ", ".join(model["efforts"]), "behavesAs": "claude-sonnet-5"}
             picker["options"].append(row)
             config["managed_rows"].append(row)
-        entry = model_settings.setdefault(model["id"], {})
+    caps = {model["id"]: model["efforts"][-1] for model in config["models"]}
+    caps.update({alias: caps[target] for alias, target in aliases.items()})
+    for name, cap in caps.items():
+        entry = model_settings.setdefault(name, {})
         if "maxEffortLevel" not in entry:
-            entry["maxEffortLevel"] = model["efforts"][-1]
-            config["managed_caps"][model["id"]] = entry["maxEffortLevel"]
+            entry["maxEffortLevel"] = cap
+            config["managed_caps"][name] = cap
     write_json(path, settings)
 
 
@@ -105,6 +140,7 @@ def restore_settings(config):
     original = read_json(Path(config["state_dir"]) / "settings-before.json", {})
     remove_model_settings(settings, config)
     env = settings.get("env", {})
+    restore_alias_environment(env, config)
     original_env = original.get("env", {})
     if env.get("ANTHROPIC_BASE_URL") == f"http://127.0.0.1:{config['port']}":
         if "ANTHROPIC_BASE_URL" in original_env:
@@ -118,7 +154,7 @@ def restore_settings(config):
         env.pop("ANTHROPIC_CUSTOM_HEADERS", None)
     if not env and "env" not in original:
         settings.pop("env", None)
-    if settings.get("model", "").removesuffix("[1m]") in {m["id"] for m in config["models"]}:
+    if settings.get("model", "").removesuffix("[1m]") in {m["id"] for m in config["models"]} | set(config.get("managed_aliases", {})):
         if "model" in original:
             settings["model"] = original["model"]
         else:

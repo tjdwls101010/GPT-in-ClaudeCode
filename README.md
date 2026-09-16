@@ -50,13 +50,15 @@ Use codex-gpt-5-6-sol-high to review these changes.
 
 The Agent tool's `model` argument can be restricted to Claude aliases, so select the generated **subagent name** and omit a separate model override. Avoid fork mode when you want a different model; forks inherit the parent conversation's model. The generated definition supplies the real GPT model and effort.
 
-For a task-specific agent, you can also put a definition in `.claude/agents/gpt-reviewer.md`:
+For your own agent definitions, `model` also accepts **`astra`**, **`sol`**, **`terra`**, and **`luna`**. Each alias resolves to the highest numeric version of that family available in your Codex account, so a new release is picked up during automatic model synchronization. Bare aliases keep the 1M client window and support the target model's effort levels; no `[1m]` suffix is needed on these four names.
+
+For example, put this definition in `.claude/agents/gpt-reviewer.md`:
 
 ```markdown
 ---
 name: gpt-reviewer
 description: Review code using a GPT subagent.
-model: gpt-5.6-sol[1m]
+model: astra
 effort: high
 tools: Read, Glob, Grep
 ---
@@ -65,6 +67,8 @@ Read the requested code and return concrete, actionable findings.
 ```
 
 Then ask Claude Code to use `gpt-reviewer` without overriding its model. The parent and subagent can use different models. Use a model from `gpt-in-claude models`; custom definitions are optional. The `effort` field selects the subagent's effort independently.
+
+You can also launch with `claude --model astra --effort high`. `gpt-in-claude models` prints the current alias-to-model mappings. Use a full ID such as `gpt-6-astra[1m]` when you want to pin a particular version. A family with no available model is rejected instead of falling back to Claude. Claude may print an `unrecognized_model` diagnostic for these gateway aliases even when the request succeeds.
 
 ## New models and updates
 

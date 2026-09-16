@@ -82,6 +82,29 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual(status, 400)
         self.assertEqual(self.requests, [])
 
+    def test_family_aliases_route_to_the_latest_available_version(self):
+        self.config['models'] = [
+            {'id': model, 'name': model, 'efforts': ['low', 'high'], 'default_effort': 'low'}
+            for model in ['gpt-9-astra', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-10-astra']
+        ]
+        for alias, expected in [('astra', 'gpt-10-astra'), ('sol', 'gpt-5.6-sol'), ('terra', 'gpt-5.6-terra'), ('luna', 'gpt-5.6-luna')]:
+            with self.subTest(alias=alias):
+                status, _ = self.post('/v1/messages', {'model': alias, 'messages': [], 'output_config': {'effort': 'high'}}, {'x-gpt-in-claudecode-key': 'local-secret'})
+                self.assertEqual(status, 200)
+                self.assertEqual(self.requests[-1][2]['model'], expected)
+                self.assertEqual(self.requests[-1][2]['output_config']['effort'], 'high')
+        self.config['models'] = [m for m in self.config['models'] if m['id'] != 'gpt-10-astra']
+        status, _ = self.post('/v1/messages', {'model': 'astra', 'messages': []}, {'x-gpt-in-claudecode-key': 'local-secret'})
+        self.assertEqual(status, 200)
+        self.assertEqual(self.requests[-1][2]['model'], 'gpt-9-astra')
+        count = len(self.requests)
+        status, _ = self.post('/v1/messages', {'model': 'astra', 'messages': [], 'output_config': {'effort': 'max'}}, {'x-gpt-in-claudecode-key': 'local-secret'})
+        self.assertEqual(status, 400)
+        self.config['models'] = [m for m in self.config['models'] if not m['id'].endswith('-astra')]
+        status, _ = self.post('/v1/messages', {'model': 'astra', 'messages': []}, {'x-gpt-in-claudecode-key': 'local-secret'})
+        self.assertEqual(status, 400)
+        self.assertEqual(len(self.requests), count)
+
     def test_codex_hop_reads_current_access_token_without_copying_refresh_token(self):
         status, _ = self.post('/codex/responses', {'model': 'gpt-example', 'input': [], 'reasoning': {'effort': 'high'}}, {'Authorization': 'Bearer local-secret', 'x-api-key': 'DO_NOT_FORWARD'})
         self.assertEqual(status, 200)
