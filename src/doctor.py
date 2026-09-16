@@ -6,7 +6,7 @@ import subprocess
 import urllib.request
 
 from .codex import access_credentials
-from .settings import read_json
+from .settings import claude_model_id, read_json
 
 
 def doctor(state):
@@ -29,7 +29,7 @@ def doctor(state):
     env = settings.get("env", {})
     checks.append({"check": "Claude routing", "ok": env.get("ANTHROPIC_BASE_URL") == f"http://127.0.0.1:{config['port']}" and "x-gpt-in-claudecode-key: " + config["key"] in env.get("ANTHROPIC_CUSTOM_HEADERS", "").splitlines()})
     rows = {r["model"] for r in settings.get("modelPicker", {}).get("options", [])}
-    checks.append({"check": "Model picker", "ok": all(m["id"] in rows for m in config["models"]), "models": len(config["models"])})
+    checks.append({"check": "Model picker", "ok": all(claude_model_id(m["id"]) in rows for m in config["models"]), "models": len(config["models"])})
     agents = config.get("managed_agents", {})
     checks.append({"check": "Generated subagents", "ok": len(agents) == sum(len(m["efforts"]) for m in config["models"]) and all((Path(config["claude_dir"]) / "agents" / name).is_file() for name in agents), "agents": len(agents)})
     version = subprocess.run(["claude", "--version"], capture_output=True, text=True).stdout.strip()

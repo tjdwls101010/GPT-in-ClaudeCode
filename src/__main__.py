@@ -48,14 +48,14 @@ def main(argv=None):
             register(config)
             print("Gateway restarted.")
         else:
-            from .settings import read_json
+            from .settings import claude_model_id, read_json
             config = read_json(Path(args.state_dir).expanduser() / "config.json", {})
             models = discover_models(config.get("codex", args.codex), config.get("codex_home"))
             if args.json:
                 print(json.dumps(models))
             else:
                 for model in models:
-                    print(f"{model['id']}: {', '.join(model['efforts'])} (default: {model['default_effort']})")
+                    print(f"{claude_model_id(model['id'])}: {', '.join(model['efforts'])} (default: {model['default_effort']})")
     except (OSError, RuntimeError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         raise SystemExit(1)

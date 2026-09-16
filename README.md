@@ -1,11 +1,11 @@
 # GPT in Claude Code
 
-Use your Codex models in Claude Code's **native `/model` menu**, including main conversations and subagents. New models appear automatically from your Codex account; existing Claude models keep their original login.
+Use your Codex models in Claude Code's **native `/model` menu**, including main conversations and subagents. GPT choices use a **1M client context window**. New models appear automatically from your Codex account; existing Claude models keep their original login.
 
 For **macOS**, **Python 3.11+**, **Claude Code 2.1.267+**, and an installed Codex CLI signed in with ChatGPT using file credential storage. GPT requests use your **Codex subscription allowance**. This is a community integration, not an officially supported OpenAI or Anthropic product.
 
 ```text
-$ claude --model gpt-5.6-luna --effort low -p 'Reply with exactly INSTALLED_GATEWAY_OK.'
+$ claude --model 'gpt-5.6-luna[1m]' --effort low -p 'Reply with exactly INSTALLED_GATEWAY_OK.'
 INSTALLED_GATEWAY_OK
 ```
 
@@ -29,6 +29,8 @@ Registered 5 Codex models. Restart Claude Code and open /model.
 
 The count depends on your account. Restart Claude Code, type `/model`, and select a GPT model. Use **← / →** to select effort; press **s** to use the choice for this session or **Enter** to save it. `/effort` and `claude --effort` work too. Each model's supported maximum is applied; `ultra` is excluded.
 
+Every managed GPT choice is labeled **(1M context)**; no separate 200K choice is generated. Existing saved GPT defaults migrate to the `[1m]` form during installation. When typing `--model` yourself, include `[1m]` as in the example: an explicit bare model ID can still use Claude's 200K fallback. The suffix declares Claude's client budget, not a higher provider limit; upstream model/account limits still apply. Codex's `model_auto_compact_token_limit` is not copied into Claude's global settings. For a session-specific 700K compaction threshold, add `--autocompact 700k`.
+
 Verify the installation:
 
 ```sh
@@ -40,7 +42,7 @@ Verify the installation:
 
 ## Subagents
 
-The installer also creates a named subagent for **every supported model/effort pair**. They update automatically with the model menu. For example, ask:
+The installer also creates a named subagent for **every supported model/effort pair**, each configured with the same 1M client window. They update automatically with the model menu. For example, ask:
 
 ```text
 Use codex-gpt-5-6-sol-high to review these changes.
@@ -54,7 +56,7 @@ For a task-specific agent, you can also put a definition in `.claude/agents/gpt-
 ---
 name: gpt-reviewer
 description: Review code using a GPT subagent.
-model: gpt-5.6-sol
+model: gpt-5.6-sol[1m]
 effort: high
 tools: Read, Glob, Grep
 ---

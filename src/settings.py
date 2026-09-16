@@ -41,6 +41,11 @@ def write_json(path, value):
     write_text(path, json.dumps(value, ensure_ascii=False, indent=2) + "\n")
 
 
+def claude_model_id(model_id):
+    """Declare the client window; Claude strips this suffix before inference."""
+    return model_id + "[1m]"
+
+
 def remove_model_settings(settings, config):
     picker = settings.get("modelPicker", {})
     picker["options"] = [row for row in picker.get("options", []) if row not in config.get("managed_rows", [])]
@@ -64,9 +69,12 @@ def apply_settings(config):
     if not isinstance(settings, dict):
         raise ValueError("Claude settings must be a JSON object")
     previous_ids = {row["model"] for row in config.get("managed_rows", [])}
-    current_ids = {m["id"] for m in config["models"]}
-    if settings.get("model") in previous_ids - current_ids:
-        settings["model"] = config["models"][0]["id"]
+    base_ids = {m["id"] for m in config["models"]}
+    current_ids = {claude_model_id(model_id) for model_id in base_ids}
+    if settings.get("model") in base_ids:
+        settings["model"] = claude_model_id(settings["model"])
+    elif settings.get("model") in previous_ids - current_ids:
+        settings["model"] = claude_model_id(config["models"][0]["id"])
     remove_model_settings(settings, config)
     env = settings.setdefault("env", {})
     env["ANTHROPIC_BASE_URL"] = f"http://127.0.0.1:{config['port']}"
@@ -79,8 +87,9 @@ def apply_settings(config):
     config["managed_rows"] = []
     config["managed_caps"] = {}
     for model in config["models"]:
-        if model["id"] not in existing:
-            row = {"model": model["id"], "label": model["name"], "description": "Codex login · " + ", ".join(model["efforts"]), "behavesAs": "claude-sonnet-5"}
+        model_id = claude_model_id(model["id"])
+        if model_id not in existing:
+            row = {"model": model_id, "label": model["name"] + " (1M context)", "description": "Codex login · " + ", ".join(model["efforts"]), "behavesAs": "claude-sonnet-5"}
             picker["options"].append(row)
             config["managed_rows"].append(row)
         entry = model_settings.setdefault(model["id"], {})
@@ -109,7 +118,7 @@ def restore_settings(config):
         env.pop("ANTHROPIC_CUSTOM_HEADERS", None)
     if not env and "env" not in original:
         settings.pop("env", None)
-    if settings.get("model") in {m["id"] for m in config["models"]}:
+    if settings.get("model", "").removesuffix("[1m]") in {m["id"] for m in config["models"]}:
         if "model" in original:
             settings["model"] = original["model"]
         else:
