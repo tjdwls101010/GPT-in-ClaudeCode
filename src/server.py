@@ -8,7 +8,7 @@ import logging
 import threading
 from urllib.parse import urlsplit
 
-from .codex import access_credentials
+from .codex import access_credentials, model_aliases
 from .network import tls_context
 
 
@@ -91,6 +91,8 @@ def make_server(config):
                 blocked = HOP_HEADERS | {"x-gpt-in-claudecode-key"} | {s.strip().lower() for s in self.headers.get("Connection", "").split(",")}
                 headers = {k: v for k, v in self.headers.items() if k.lower() not in blocked}
                 headers["Accept-Encoding"] = "identity"
+                if not internal:
+                    payload["model"] = model_aliases(config["models"]).get(payload["model"], payload["model"])
                 model = next((m for m in config["models"] if m["id"] == payload["model"]), None)
                 if internal:
                     if not model or payload.get("reasoning", {}).get("effort") not in model["efforts"]:

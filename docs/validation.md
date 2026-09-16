@@ -18,6 +18,8 @@ The table is a test record, not a hardcoded registration list. The app queries C
 
 After adding 1M-only GPT picker entries, the same **24/24** combinations passed on **Claude Code 2.1.273** with `[1m]` selected, and every result reported `contextWindow: 1000000`. The deterministic suite grew to **19 passing tests**, including migration of saved GPT defaults, persistence through reinstall, and removal of 1M selections. This verifies the declared client window and ordinary inference, not successful processing of a million-token prompt by the Codex subscription backend.
 
+The `astra`, `sol`, `terra`, and `luna` aliases subsequently passed **4/4** live calls at `high` effort with a 1M client window. A real Markdown subagent definition with `model: astra` and `effort: medium` also completed a `Read` task under a Sol parent; both contexts were 1M, and final-hop metadata identified `gpt-6-astra` with `medium` effort. The deterministic suite now has **21 tests**, including numeric-version alias selection, rejection of missing families and unsupported efforts, and restoration of pre-existing environment settings after reinstall/removal. Claude emitted a non-fatal `unrecognized_model` diagnostic for these gateway aliases.
+
 ## Real Claude Code flows
 
 - **Native model menu:** opened `/model` in the interactive terminal, confirmed GPT rows alongside the original Claude choices, and exercised the effort arrows. Claude clamps GPT 5.5 to `xhigh` when a request asks for `max`.

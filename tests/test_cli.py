@@ -212,6 +212,25 @@ for line in sys.stdin:
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(path.read_text())['model'], 'gpt-example[1m]')
 
+    def test_install_enables_bare_alias_effort_and_one_million_then_restores_environment(self):
+        self.codex.write_text(self.codex.read_text().replace('gpt-example', 'gpt-6-astra'))
+        path = self.path / 'claude' / 'settings.json'
+        path.parent.mkdir()
+        original = {'env': {'CLAUDE_CODE_MAX_CONTEXT_TOKENS': '300000', 'CLAUDE_CODE_MODEL_CAPABILITIES': 'other=effort'}}
+        path.write_text(json.dumps(original))
+        result = self.run_cli(*self.install_args(), 'install')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        settings = json.loads(path.read_text())
+        self.assertEqual(settings['env']['CLAUDE_CODE_MAX_CONTEXT_TOKENS'], '1000000')
+        self.assertIn('astra=effort', settings['env']['CLAUDE_CODE_MODEL_CAPABILITIES'])
+        self.assertIn('other=effort', settings['env']['CLAUDE_CODE_MODEL_CAPABILITIES'])
+        self.assertEqual(settings['modelSettings']['astra']['maxEffortLevel'], 'high')
+        self.assertIn('astra -> gpt-6-astra', self.run_cli('models').stdout)
+        self.assertEqual(self.run_cli(*self.install_args(), 'install').returncode, 0)
+        self.assertEqual(json.loads(path.read_text()), settings)
+        self.run_cli('uninstall')
+        self.assertEqual(json.loads(path.read_text()), original)
+
 
 if __name__ == "__main__":
     unittest.main()

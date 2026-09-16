@@ -16,6 +16,19 @@ from . import __version__
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
 
 
+def model_aliases(models):
+    """Resolve family names using numeric versions from the account's catalog."""
+    latest = {}
+    for model in models:
+        match = re.fullmatch(r"gpt-(\d+(?:\.\d+)*)-(astra|sol|terra|luna)", model["id"])
+        if match:
+            version = tuple(map(int, match[1].split(".")))
+            family = match[2]
+            if family not in latest or version > latest[family][0]:
+                latest[family] = (version, model["id"])
+    return {family: latest[family][1] for family in sorted(latest)}
+
+
 class CodexRPC:
     def __init__(self, binary="codex", home=None):
         env = dict(os.environ)

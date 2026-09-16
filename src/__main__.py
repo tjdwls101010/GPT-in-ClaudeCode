@@ -4,7 +4,7 @@ import os
 import sys
 from pathlib import Path
 
-from .codex import discover_models
+from .codex import discover_models, model_aliases
 
 
 def main(argv=None):
@@ -56,6 +56,8 @@ def main(argv=None):
             else:
                 for model in models:
                     print(f"{claude_model_id(model['id'])}: {', '.join(model['efforts'])} (default: {model['default_effort']})")
+                for alias, target in model_aliases(models).items():
+                    print(f"{alias} -> {target} (1M context)")
     except (OSError, RuntimeError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         raise SystemExit(1)
