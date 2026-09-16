@@ -16,6 +16,8 @@ Measured on a local Apple Silicon Mac on **2026-09-15–16**, with **Claude Code
 
 The table is a test record, not a hardcoded registration list. The app queries Codex for the current account's models and effort choices. `ultra` is intentionally excluded.
 
+After adding 1M-only GPT picker entries, the same **24/24** combinations passed on **Claude Code 2.1.273** with `[1m]` selected, and every result reported `contextWindow: 1000000`. The deterministic suite grew to **19 passing tests**, including migration of saved GPT defaults, persistence through reinstall, and removal of 1M selections. This verifies the declared client window and ordinary inference, not successful processing of a million-token prompt by the Codex subscription backend.
+
 ## Real Claude Code flows
 
 - **Native model menu:** opened `/model` in the interactive terminal, confirmed GPT rows alongside the original Claude choices, and exercised the effort arrows. Claude clamps GPT 5.5 to `xhigh` when a request asks for `max`.

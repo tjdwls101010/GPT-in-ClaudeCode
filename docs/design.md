@@ -4,6 +4,8 @@
 
 Claude Code supports user-level [`modelPicker`](https://code.claude.com/docs/en/settings-reference#modelpicker) entries. The installed 2.1.272 build also accepts `behavesAs` on a row, which supplies client-side effort/tool handling without changing the model ID sent upstream. We use a Sonnet 5 handling profile and apply per-model effort caps from Codex's actual catalog. This profile is a compatibility choice, not a claim that GPT has Sonnet's pricing or capabilities.
 
+Picker entries and generated subagents use the `[1m]` suffix so Claude declares a 1,000,000-token client window instead of the gateway's 200K fallback. Claude strips the suffix before the gateway receives the request, so discovery, credential routing, and the converter continue using the original Codex model ID. This does not change a provider's actual context limit. Claude's original model windows and global auto-compaction setting are left alone.
+
 Gateway `/v1/models` discovery alone is insufficient: Claude Code [filters those results to IDs containing `claude` or `anthropic`](https://code.claude.com/docs/en/llm-gateway-protocol#model-discovery). Updating the native picker from Codex's official [`model/list`](https://developers.openai.com/codex/app-server) avoids fabricated model aliases and manual registration.
 
 ## Reuse CLIProxyAPI for protocol conversion

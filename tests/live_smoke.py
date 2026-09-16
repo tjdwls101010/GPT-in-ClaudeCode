@@ -23,14 +23,16 @@ def main():
 
     def run(case):
         model, effort = case
+        selected = model + "[1m]"
         started = time.monotonic()
-        command = ["claude", "--bare", "--settings", json.dumps(isolated), "--model", model, "--effort", effort, "--tools", "", "--system-prompt", "Be concise.", "--no-session-persistence", "-p", "Reply with exactly MODEL_MATRIX_OK.", "--output-format", "json"]
+        command = ["claude", "--bare", "--settings", json.dumps(isolated), "--model", selected, "--effort", effort, "--tools", "", "--system-prompt", "Be concise.", "--no-session-persistence", "-p", "Reply with exactly MODEL_MATRIX_OK.", "--output-format", "json"]
         result = subprocess.run(command, cwd=args.state_dir, env=env, capture_output=True, text=True, timeout=180)
         try:
             data = json.loads(result.stdout)
         except ValueError:
             data = {"result": result.stderr[-500:]}
-        row = {"model": model, "effort": effort, "ok": result.returncode == 0 and data.get("result", "").strip() == "MODEL_MATRIX_OK" and model in data.get("modelUsage", {}), "seconds": round(time.monotonic() - started, 2), "result": data.get("result")}
+        context_window = data.get("modelUsage", {}).get(selected, {}).get("contextWindow")
+        row = {"model": selected, "effort": effort, "context_window": context_window, "ok": result.returncode == 0 and data.get("result", "").strip() == "MODEL_MATRIX_OK" and context_window == 1000000, "seconds": round(time.monotonic() - started, 2), "result": data.get("result")}
         print(json.dumps(row), flush=True)
         return row
 

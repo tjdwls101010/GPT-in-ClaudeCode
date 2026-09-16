@@ -60,7 +60,7 @@ for line in sys.stdin:
         self.assertEqual(settings['model'], 'opus')
         self.assertEqual(settings['hooks'], {'Stop': []})
         self.assertEqual(settings['env']['KEEP_ME'], 'yes')
-        self.assertEqual([r['model'] for r in settings['modelPicker']['options']], ['gpt-example'])
+        self.assertEqual([r['model'] for r in settings['modelPicker']['options']], ['gpt-example[1m]'])
         self.assertIn('ANTHROPIC_BASE_URL', settings['env'])
         self.assertNotIn('ANTHROPIC_API_KEY', settings['env'])
         second = self.run_cli(*args)
@@ -88,7 +88,9 @@ for line in sys.stdin:
         for _ in range(2):
             result = self.run_cli(*self.install_args(), 'install')
             self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(json.loads(path.read_text())['modelPicker']['options'], [custom])
+        rows = json.loads(path.read_text())['modelPicker']['options']
+        self.assertIn(custom, rows)
+        self.assertIn('gpt-example[1m]', [row['model'] for row in rows])
 
     def test_sync_discovers_a_new_model_without_reinstalling(self):
         self.assertEqual(self.run_cli(*self.install_args(), 'install').returncode, 0)
@@ -96,7 +98,7 @@ for line in sys.stdin:
         result = self.run_cli('--state-dir', str(self.path / 'state'), 'sync')
         self.assertEqual(result.returncode, 0, result.stderr)
         settings = json.loads((self.path / 'claude' / 'settings.json').read_text())
-        self.assertEqual([r['model'] for r in settings['modelPicker']['options']], ['gpt-new-release'])
+        self.assertEqual([r['model'] for r in settings['modelPicker']['options']], ['gpt-new-release[1m]'])
         self.assertNotIn('gpt-example', settings['modelSettings'])
 
     def test_reinstall_after_removal_uses_the_new_upstream_and_recovery_baseline(self):
@@ -122,11 +124,11 @@ for line in sys.stdin:
         self.assertEqual(self.run_cli(*self.install_args(), 'install').returncode, 0)
         path = self.path / 'claude' / 'settings.json'
         settings = json.loads(path.read_text())
-        settings['model'] = 'gpt-example'
+        settings['model'] = 'gpt-example[1m]'
         path.write_text(json.dumps(settings))
         self.codex.write_text(self.codex.read_text().replace('gpt-example', 'gpt-new-release'))
         self.assertEqual(self.run_cli('--state-dir', str(self.path / 'state'), 'sync').returncode, 0)
-        self.assertEqual(json.loads(path.read_text())['model'], 'gpt-new-release')
+        self.assertEqual(json.loads(path.read_text())['model'], 'gpt-new-release[1m]')
         self.run_cli('--state-dir', str(self.path / 'state'), 'uninstall')
         self.assertNotIn('model', json.loads(path.read_text()))
 
@@ -180,10 +182,35 @@ for line in sys.stdin:
         agents = self.path / 'claude' / 'agents'
         self.assertEqual(sorted(p.name for p in agents.glob('*.md')), ['codex-gpt-example-high.md', 'codex-gpt-example-low.md'])
         definition = (agents / 'codex-gpt-example-high.md').read_text()
-        self.assertIn('model: gpt-example\n', definition)
+        self.assertIn('model: gpt-example[1m]\n', definition)
         self.assertIn('effort: high\n', definition)
         self.run_cli('--state-dir', str(self.path / 'state'), 'uninstall')
         self.assertEqual(list(agents.glob('*.md')), [])
+
+    def test_one_million_picker_selection_survives_reinstall_and_is_removed_cleanly(self):
+        result = self.run_cli(*self.install_args(), 'install')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        path = self.path / 'claude' / 'settings.json'
+        settings = json.loads(path.read_text())
+        options = {row['model']: row for row in settings['modelPicker']['options']}
+        self.assertEqual(list(options), ['gpt-example[1m]'])
+        self.assertEqual(options['gpt-example[1m]']['label'], 'GPT Example (1M context)')
+        settings['model'] = 'gpt-example[1m]'
+        path.write_text(json.dumps(settings))
+        self.assertEqual(self.run_cli(*self.install_args(), 'install').returncode, 0)
+        self.assertEqual(json.loads(path.read_text())['model'], 'gpt-example[1m]')
+        self.run_cli('--state-dir', str(self.path / 'state'), 'uninstall')
+        restored = json.loads(path.read_text())
+        self.assertNotIn('model', restored)
+        self.assertNotIn('modelPicker', restored)
+
+    def test_install_upgrades_previously_selected_gpt_to_one_million(self):
+        path = self.path / 'claude' / 'settings.json'
+        path.parent.mkdir()
+        path.write_text(json.dumps({'model': 'gpt-example'}))
+        result = self.run_cli(*self.install_args(), 'install')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(path.read_text())['model'], 'gpt-example[1m]')
 
 
 if __name__ == "__main__":
